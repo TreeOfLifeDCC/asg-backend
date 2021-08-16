@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-portal-backend
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  tls:
+    - hosts:
+        - portal.aquaticsymbiosisgenomics.org
+      secretName: tls-secret
+  rules:
+    - host: portal.aquaticsymbiosisgenomics.org
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            backend:
+              serviceName: portal-backend-svc
+              servicePort: 80

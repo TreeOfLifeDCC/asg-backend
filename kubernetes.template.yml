@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: _APP_NAME_
+  labels:
+    app: _APP_NAME_
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: _APP_NAME_
+  template:
+    metadata:
+      labels:
+        app: _APP_NAME_
+    spec:
+      containers:
+        - name: springbootapp
+          image: _IMAGE_
+          imagePullPolicy: "Always"
+          env:
+            - name: ES_CONNECTION_URL
+              value: elasticsearch:9200
+          ports:
+            - containerPort: 8080
+      initContainers:
+        - name: init-elasticsearch
+          image: busybox
+          command: ['sh', '-c', 'until nslookup elasticsearch; do echo waiting for myservice; sleep 2; done;']
+      imagePullSecrets:
+        - name: gitlab-registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-backend-svc
+  labels:
+    app: portal-backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  selector:
+      app: portal-backend
+
+--- 
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  type: ExternalName
+  externalName: elasticsearch.elasticsearch.svc.cluster.local
+  ports:
+  - port: 9200
