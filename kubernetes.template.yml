@@ -35,7 +35,7 @@ kind: Service
 metadata:
   name: portal-backend-svc
   labels:
-    app: portal-backend
+    app: asg-backend
 spec:
   type: ClusterIP
   ports:
@@ -43,7 +43,7 @@ spec:
       targetPort: 8080
       protocol: TCP
   selector:
-      app: portal-backend
+      app: asg-backend
 
 --- 
 apiVersion: v1
