@@ -22,6 +22,7 @@ public class SwaggerConfig implements WebMvcConfigurer {
                 .apis(RequestHandlerSelectors.basePackage("com.asg.platform.controller"))
                 .paths(PathSelectors.any())
                 .build()
+                .pathMapping("/api")
                 .apiInfo(metaData())
                 .additionalModels(new TypeResolver().resolve(SecondaryOrganism.class),new TypeResolver().resolve(StatusTracking.class));
     }
