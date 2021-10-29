@@ -6,6 +6,7 @@ import com.asg.platform.es.repository.RootOrganismRepository;
 import com.asg.platform.es.service.RootSampleService;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -156,7 +157,7 @@ public class RootSampleServiceImpl implements RootSampleService {
                 }
             } else {
                 if(sortColumn.get().toString().equals("trackingSystem")) {
-                    sort.append("{'trackingSystem.desc':{'order':'desc','nested_path':'trackingSystem'}}");
+                    sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem'}}");
                 }
                 else {
                     sort.append("{'" + sortColumn.get() + "':'desc'}");
@@ -375,22 +376,18 @@ public class RootSampleServiceImpl implements RootSampleService {
     }
 
     @Override
-    public long getRootOrganismCount() {
-        NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                .withQuery(matchAllQuery())
-                .build();
-        long count = elasticsearchOperations
-                .count(searchQuery, IndexCoordinates.of("data_portal_index"));
+    public long getRootOrganismCount() throws ParseException {
+        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal_index/_count");
+        JSONObject resp = (JSONObject) new JSONParser().parse(respString);
+        long count = Long.valueOf(resp.get("count").toString());
         return count;
     }
 
     @Override
-    public long getRelatedOrganismCount() {
-        NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                .withQuery(matchAllQuery())
-                .build();
-        long count = elasticsearchOperations
-                .count(searchQuery, IndexCoordinates.of("data_portal_index"));
+    public long getRelatedOrganismCount() throws ParseException {
+        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal_index/_count");
+        JSONObject resp = (JSONObject) new JSONParser().parse(respString);
+        long count = Long.valueOf(resp.get("count").toString());
         return count;
     }
 
@@ -485,4 +482,25 @@ public class RootSampleServiceImpl implements RootSampleService {
         return accession;
     }
 
+    private String getRequest(String baseURL) {
+        CloseableHttpClient client = HttpClients.createDefault();
+        StringEntity entity = null;
+        String resp = "";
+        try {
+            HttpGet httpGET = new HttpGet(baseURL);
+            httpGET.setHeader("Accept", "application/json");
+            httpGET.setHeader("Content-type", "application/json");
+            CloseableHttpResponse rs = client.execute(httpGET);
+            resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return resp;
+    }
 }

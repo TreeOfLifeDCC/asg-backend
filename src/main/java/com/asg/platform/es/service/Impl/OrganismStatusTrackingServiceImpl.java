@@ -159,17 +159,17 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             if (sortColumn.isPresent()) {
                 sortColumnName = sortColumn.get().toString();
                 if (sortColumnName.equals("metadata_submitted_to_biosamples")) {
-                    sortColumnName = "biosamples";
+                    sortColumnName = "biosamples.keyword";
                 } else if (sortColumnName.equals("raw_data_submitted_to_ena")) {
-                    sortColumnName = "raw_data";
+                    sortColumnName = "raw_data.keyword";
                 } else if (sortColumnName.equals("mapped_reads_submitted_to_ena")) {
-                    sortColumnName = "mapped_reads";
+                    sortColumnName = "mapped_reads.keyword";
                 } else if (sortColumnName.equals("assemblies_submitted_to_ena")) {
-                    sortColumnName = "assemblies";
+                    sortColumnName = "assemblies.keyword";
                 } else if (sortColumnName.equals("annotation_submitted_to_ena")) {
-                    sortColumnName = "annotation";
+                    sortColumnName = "annotation.keyword";
                 } else if (sortColumnName.equals("annotation_complete")) {
-                    sortColumnName = "annotation_complete";
+                    sortColumnName = "annotation_complete.keyword";
                 }
 
 //                sort.append("'sort' : ");
@@ -241,27 +241,27 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
                 String[] splitArray = filterArray[i].split("-");
 
                 if (splitArray[0].trim().equals("Biosamples")) {
-                    sb.append("{'terms' : {'biosamples':[");
+                    sb.append("{'terms' : {'biosamples.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("Raw data")) {
-                    sb.append("{'terms' : {'raw_data':[");
+                    sb.append("{'terms' : {'raw_data.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("Mapped reads")) {
-                    sb.append("{'terms' : {'mapped_reads':[");
+                    sb.append("{'terms' : {'mapped_reads.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("Assemblies")) {
-                    sb.append("{'terms' : {'assemblies':[");
+                    sb.append("{'terms' : {'assemblies.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("Annotation complete")) {
-                    sb.append("{'terms' : {'annotation_complete':[");
+                    sb.append("{'terms' : {'annotation_complete.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("Annotation")) {
-                    sb.append("{'terms' : {'annotation':[");
+                    sb.append("{'terms' : {'annotation.keyword':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
                 }
@@ -286,12 +286,12 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             }
         }
 
-        sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
-        sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
-        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
-        sb.append("'assemblies': {'terms': {'field': 'assemblies'}},");
-        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
-        sb.append("'annotation': {'terms': {'field': 'annotation'}}");
+        sb.append("'biosamples': {'terms': {'field': 'biosamples.keyword'}},");
+        sb.append("'raw_data': {'terms': {'field': 'raw_data.keyword'}},");
+        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads.keyword'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies.keyword'}},");
+        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete.keyword'}},");
+        sb.append("'annotation': {'terms': {'field': 'annotation.keyword'}}");
         sb.append("}");
 
         sb.append("}");
@@ -319,16 +319,16 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("'query': {");
         sb.append("'query_string': {");
         sb.append("'query' : '" + searchQuery.toString() + "',");
-        sb.append("'fields' : ['organism','commonName','biosamples','raw_data','mapped_reads','assemblies','annotation_complete','annotation']");
+        sb.append("'fields' : ['organism','commonName','biosamples.keyword','raw_data.keyword','mapped_reads.keyword','assemblies.keyword','annotation_complete.keyword','annotation.keyword']");
         sb.append("}},");
 
         sb.append("'aggregations': {");
-        sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
-        sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
-        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
-        sb.append("'assemblies': {'terms': {'field': 'assemblies'}},");
-        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
-        sb.append("'annotation': {'terms': {'field': 'annotation'}},");
+        sb.append("'biosamples': {'terms': {'field': 'biosamples.keyword'}},");
+        sb.append("'raw_data': {'terms': {'field': 'raw_data.keyword'}},");
+        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads.keyword'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies.keyword'}},");
+        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete.keyword'}},");
+        sb.append("'annotation': {'terms': {'field': 'annotation.keyword'}},");
         sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
         sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
         sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}}}}}}");

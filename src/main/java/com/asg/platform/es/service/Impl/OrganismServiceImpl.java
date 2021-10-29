@@ -135,8 +135,8 @@ public class OrganismServiceImpl implements OrganismService {
         JSONArray sexFilter = (JSONArray) ((JSONObject) aggregations.get("sex_filter")).get("buckets");
         JSONArray orgPartFilterObj = (JSONArray) ((JSONObject) aggregations.get("organism_part_filter")).get("buckets");
 
-        filterMap.put("sex",sexFilter);
-        filterMap.put("organismPart",orgPartFilterObj);
+        filterMap.put("sex", sexFilter);
+        filterMap.put("organismPart", orgPartFilterObj);
 
         return filterMap;
     }

@@ -22,9 +22,9 @@ public interface RootSampleService {
 
     public String findRootOrganismFilterResults(Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException;
 
-    public long getRootOrganismCount();
+    public long getRootOrganismCount() throws ParseException;
 
-    public long getRelatedOrganismCount();
+    public long getRelatedOrganismCount() throws ParseException;
 
     public String getDistinctRootSamplesByOrganismQuery(String size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> afterKey);
 
