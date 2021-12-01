@@ -54,27 +54,55 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
         JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
         return respArray;
     }
 
     @Override
-    public Map<String, JSONArray> getRootOrganismFilters() throws ParseException {
-        Map<String, JSONArray> filterMap = new HashMap<String, JSONArray>();
+    public Map<String, List<JSONObject>> getRootOrganismFilters() throws ParseException {
+        Map<String, List<JSONObject>> filterMap = new HashMap<>();
         StringBuilder sb = new StringBuilder();
         sb.append("{'size':0, 'aggregations':{");
         sb.append("'trackingSystem': { 'nested': { 'path':'trackingSystem'},");
         sb.append("'aggs':{");
-        sb.append("'filter':{'terms':{'field':'trackingSystem.status', 'order': { '_key' : 'desc' }}}");
-        sb.append("}}");
-        sb.append("}}");
+        sb.append("'rank':{'terms':{'field':'trackingSystem.rank', 'order': { '_key' : 'desc' }},");
+        sb.append("'aggregations':{ 'name': {'terms':{'field':'trackingSystem.name'},");
+        sb.append("'aggregations':{ 'status': {'terms':{'field':'trackingSystem.status'}");
+        sb.append("}}}}}}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
-        JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("filter");
-        JSONArray trackFilter = (JSONArray) (aggregations.get("buckets"));
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("rank");
+        JSONArray trackFilterArray = (JSONArray) (aggregations.get("buckets"));
+        for(int i=0; i<trackFilterArray.size();i++) {
+            JSONObject obj = (JSONObject) trackFilterArray.get(i);
+            JSONObject trackObj = (JSONObject) ((JSONArray) ((JSONObject) (obj).get("name")).get("buckets")).get(0);
+            String name = "";
+            if (trackObj.get("key").toString().equals("biosamples")) {
+                name = "Biosamples";
+            } else if (trackObj.get("key").toString().equals("mapped_reads")) {
+                name = "Mapped reads";
+            } else if (trackObj.get("key").toString().equals("assemblies")) {
+                name = "Assemblies";
+            } else if (trackObj.get("key").toString().equals("raw_data")) {
+                name = "Raw data";
+            } else if (trackObj.get("key").toString().equals("annotation")) {
+                name = "Annotation";
+            } else if (trackObj.get("key").toString().equals("annotation_complete")) {
+                name = "Annotation complete";
+            }
 
-        filterMap.put("trackingSystem", trackFilter);
+            JSONArray arr = (JSONArray) (((JSONObject) trackObj.get("status"))).get("buckets");
+            List<JSONObject> statusArray = new ArrayList<JSONObject>();
+            for (int j = 0; j < arr.size(); j++) {
+                JSONObject temp = (JSONObject) arr.get(j);
+                JSONObject filterObj = new JSONObject();
+                filterObj.put("key", name + " - " + temp.get("key"));
+                filterObj.put("doc_count", temp.get("doc_count"));
+                statusArray.add(filterObj);
+            }
+            filterMap.put(trackObj.get("key").toString(), statusArray);
+        }
 
         return filterMap;
     }
@@ -98,7 +126,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'organism_part_filter':{'terms':{'field':'records.organismPart', 'size': 2000}}");
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
         JSONArray sexFilter = (JSONArray) ((JSONObject) aggregations.get("sex_filter")).get("buckets");
         JSONArray trackFilter = (JSONArray) ((JSONObject) aggregations.get("tracking_status_filter")).get("buckets");
@@ -118,7 +146,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getSecondaryOrganismFilterResultQuery(organism, filter, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
         return respString;
     }
 
@@ -128,7 +156,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getOrganismFilterQuery(filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
         return respString;
     }
 
@@ -139,7 +167,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getRootOrganismSearchQuery(search, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
 
         return respString;
     }
@@ -147,25 +175,24 @@ public class RootSampleServiceImpl implements RootSampleService {
     private StringBuilder getSortQuery(Optional<String> sortColumn, Optional<String> sortOrder) {
         StringBuilder sort = new StringBuilder();
         sort.append("'sort' : [");
+        String sortColumnName = "";
         if (sortColumn.isPresent()) {
+            sortColumnName = sortColumn.get();
+            if(sortColumnName.equals("annotation")) {
+                sortColumnName = "annotation_status";
+            }
+            else if(sortColumnName.equals("assemblies")) {
+                sortColumnName = "assemblies_status";
+            }
+
             if (sortOrder.get().equals("asc")) {
-                if(sortColumn.get().toString().equals("trackingSystem")) {
-                    sort.append("{'trackingSystem.rank':{'order':'asc','nested_path':'trackingSystem'}}");
-                }
-                else {
-                    sort.append("{'" + sortColumn.get() + "':'asc'}");
-                }
+                sort.append("{'" + sortColumnName + "':'asc'}");
             } else {
-                if(sortColumn.get().toString().equals("trackingSystem")) {
-                    sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem'}}");
-                }
-                else {
-                    sort.append("{'" + sortColumn.get() + "':'desc'}");
-                }
+                sort.append("{'" + sortColumnName + "':'desc'}");
             }
         }
         else {
-            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem'}}");
+            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem', 'nested_filter':{'term':{'trackingSystem.status':'Done'}}}}");
         }
         sort.append("],");
 
@@ -217,7 +244,6 @@ public class RootSampleServiceImpl implements RootSampleService {
         StringBuilder sb = new StringBuilder();
         StringBuilder sbt = new StringBuilder();
         StringBuilder sort = this.getSortQuery(sortColumn, sortOrder);
-        JSONObject taxaJson = null;
 
         sb.append("{");
         if (!from.equals("undefined") && !size.equals("undefined"))
@@ -262,28 +288,38 @@ public class RootSampleServiceImpl implements RootSampleService {
 
         if (filter.isPresent() && (!filter.get().equals("undefined") && !filter.get().equals(""))) {
             String[] filterArray = filter.get().split(",");
-            if (taxonomyFilter.isPresent() && !taxonomyFilter.get().equals("undefined") && !taxonomyFilter.get().equals("[]")) {
-                sb.append(sbt.toString() + ",");
-            }
-            else {
-                sb.append(sbt.toString());
-            }
-            sb.append("{ 'nested' : { 'path': 'trackingSystem', 'query' : ");
-            sb.append("{ 'bool' : { 'must' : [");
-            sb.append("{ 'terms' : { 'trackingSystem.status':[");
+            sb.append(sbt.toString() + ",");
             for (int i = 0; i < filterArray.length; i++) {
-                if (i == 0) {
-                    sb.append("'" + filterArray[i] + "'");
-                }
-                else {
-                    sb.append(",'" + filterArray[i] + "'");
+                String[] splitArray = filterArray[i].split("-");
+
+                if (splitArray[0].trim().equals("Biosamples")) {
+                    sb.append("{'terms' : {'biosamples':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Raw data")) {
+                    sb.append("{'terms' : {'raw_data':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Mapped reads")) {
+                    sb.append("{'terms' : {'mapped_reads':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Assemblies")) {
+                    sb.append("{'terms' : {'assemblies_status':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Annotation complete")) {
+                    sb.append("{'terms' : {'annotation_complete':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Annotation")) {
+                    sb.append("{'terms' : {'annotation_status':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
                 }
             }
-            sb.append("]}}");
-            sb.append("]}}}}");
             sb.append("]}},");
-        }
-        else {
+        } else {
             sb.append(sbt.toString());
             sb.append("]}},");
         }
@@ -301,14 +337,18 @@ public class RootSampleServiceImpl implements RootSampleService {
                 sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies."+taxa.get("childRank")+".commonName', 'size': 20000}}}}}},");
             }
         }
-        sb.append("'trackingSystem': { 'nested': { 'path':'trackingSystem'},");
-        sb.append("'aggs':{");
-        sb.append("'filter':{'terms':{'field':'trackingSystem.status', 'size': 20000}}");
-        sb.append("}}");
 
-        sb.append("}}");
+        sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
+        sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
+        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
+        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
+        sb.append("'annotation': {'terms': {'field': 'annotation_status'}}");
+        sb.append("}");
 
-        String query = sb.toString().replaceAll("'", "\"");
+        sb.append("}");
+
+        String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
         return query;
     }
 
@@ -331,16 +371,17 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'query': {");
         sb.append("'query_string': {");
         sb.append("'query' : '" + searchQuery.toString() + "',");
-        sb.append("'fields' : ['organism.normalize','commonName.normalize', 'trackingSystem.status.normalize']");
+        sb.append("'fields' : ['organism.normalize','commonName.normalize', 'biosamples','raw_data','mapped_reads','assemblies_status','annotation_complete','annotation_status']");
         sb.append("}},");
 
         sb.append("'aggregations': {");
-        sb.append("'sex': {'terms': {'field': 'sex'}},");
-        sb.append("'trackingSystem': { 'nested': { 'path':'trackingSystem'},");
-        sb.append("'aggs':{");
-        sb.append("'filter':{'terms':{'field':'trackingSystem.status', 'size': 20000}}");
-        sb.append("}},");
-        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
+        sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
+        sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
+        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies'}},");
+        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
+        sb.append("'annotation': {'terms': {'field': 'annotation'}},");
+        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies'},");
         sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
         sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}}}}}}");
         sb.append("}");
@@ -377,7 +418,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRootOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal_index/_count");
+        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -385,7 +426,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRelatedOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal_index/_count");
+        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -482,6 +523,23 @@ public class RootSampleServiceImpl implements RootSampleService {
         return accession;
     }
 
+    @Override
+    public JSONObject findRootSampleById(String id) throws ParseException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("'query' : { 'bool' : { 'must' : [");
+        sb.append("{'terms' : {'_id':['");
+        sb.append(id);
+        sb.append("']}}]}}}");
+        String query = sb.toString().replaceAll("'", "\"");
+
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        JSONObject resp = (JSONObject) ((JSONArray)((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits"))).get("hits")).get(0);
+        JSONObject source = (JSONObject) resp.get("_source");
+
+        return source;
+    }
+
     private String getRequest(String baseURL) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -503,4 +561,5 @@ public class RootSampleServiceImpl implements RootSampleService {
         }
         return resp;
     }
+
 }

@@ -5,6 +5,7 @@ import com.asg.platform.es.repository.OrganismStatusTrackingRepository;
 import com.asg.platform.es.service.OrganismStatusTrackingService;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -58,12 +59,10 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
     }
 
     @Override
-    public long getBiosampleStatusTrackingCount() {
-        NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                .withQuery(matchAllQuery())
-                .build();
-        long count = elasticsearchOperations
-                .count(searchQuery, IndexCoordinates.of("tracking_status_index"));
+    public long getBiosampleStatusTrackingCount() throws ParseException {
+        String respString = this.getRequest("http://" + esConnectionURL + "/tracking_status_index/_count");
+        JSONObject resp = (JSONObject) new JSONParser().parse(respString);
+        long count = Long.valueOf(resp.get("count").toString());
         return count;
     }
 
@@ -117,7 +116,6 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
 
     @Override
     public String findFilterResults(Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException {
-        List<SecondaryOrganism> results = new ArrayList<SecondaryOrganism>();
         String respString = null;
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
@@ -172,7 +170,6 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
                     sortColumnName = "annotation_complete.keyword";
                 }
 
-//                sort.append("'sort' : ");
                 if (sortOrder.get().equals("asc")) {
                     sort.append("{'" + sortColumnName + "':'asc'}");
                 } else {
@@ -381,6 +378,28 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("}}}");
         String query = sb.toString().replaceAll("'", "\"");
         return query;
+    }
+
+    private String getRequest(String baseURL) {
+        CloseableHttpClient client = HttpClients.createDefault();
+        StringEntity entity = null;
+        String resp = "";
+        try {
+            HttpGet httpGET = new HttpGet(baseURL);
+            httpGET.setHeader("Accept", "application/json");
+            httpGET.setHeader("Content-type", "application/json");
+            CloseableHttpResponse rs = client.execute(httpGET);
+            resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return resp;
     }
 
 

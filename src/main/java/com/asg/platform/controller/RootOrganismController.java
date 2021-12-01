@@ -6,6 +6,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.websocket.server.PathParam;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -49,15 +52,15 @@ public class RootOrganismController {
 
     @ApiOperation(value = "Get Filters for Filtering Root Organisms")
     @RequestMapping(value = "/root/filters", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, JSONArray>> getRootOrganismFilters() throws ParseException {
-        Map<String, JSONArray> resp = rootSampleService.getRootOrganismFilters();
-        return new ResponseEntity<Map<String, JSONArray>>(resp, HttpStatus.OK);
+    public ResponseEntity<Map<String, List<JSONObject>>> getRootOrganismFilters() throws ParseException {
+        Map<String, List<JSONObject>> resp = rootSampleService.getRootOrganismFilters();
+        return new ResponseEntity<Map<String, List<JSONObject>>>(resp, HttpStatus.OK);
     }
 
     @ApiIgnore
     @ApiOperation(value = "Get Filters for Filtering Secondary Organisms")
     @RequestMapping(value = "/secondary/filters", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, JSONArray>> getSecondaryOrganismFilters(@RequestParam(name = "organism") String organism) throws ParseException {
+    public ResponseEntity<Map<String, JSONArray>> getSecondaryOrganismFilters(@ApiParam(example = "Lutra lutra") @RequestParam(name = "organism") String organism) throws ParseException {
         Map<String, JSONArray> resp = rootSampleService.getSecondaryOrganismFilters(organism);
         return new ResponseEntity<Map<String, JSONArray>>(resp, HttpStatus.OK);
     }
@@ -85,6 +88,13 @@ public class RootOrganismController {
 
         String resp = rootSampleService.findRootOrganismSearchResult(filter, from, size, sortColumn, sortOrder);
         return new ResponseEntity<String>(resp, HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Get Root Organism By Id")
+    @RequestMapping(value = "/root", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JSONObject> getRootOrganismById(@ApiParam(example = "Lutra lutra") @PathParam("id") String id) throws ParseException {
+        JSONObject rs = rootSampleService.findRootSampleById(id);
+        return new ResponseEntity<JSONObject>(rs, HttpStatus.OK);
     }
 
 }

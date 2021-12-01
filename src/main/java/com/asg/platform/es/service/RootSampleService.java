@@ -5,6 +5,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -12,7 +13,7 @@ public interface RootSampleService {
 
     public JSONArray findAllOrganisms(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder) throws ParseException;
 
-    public Map<String, JSONArray> getRootOrganismFilters() throws ParseException;
+    public Map<String, List<JSONObject>> getRootOrganismFilters() throws ParseException;
 
     public Map<String, JSONArray> getSecondaryOrganismFilters(String organism) throws ParseException;
 
@@ -37,5 +38,7 @@ public interface RootSampleService {
     public RootOrganism findRootSampleByOrganism(String organism);
 
     public JSONArray findSampleAccessionByOrganism(String organism) throws ParseException;
+
+    public JSONObject findRootSampleById(String id) throws ParseException;
 
 }

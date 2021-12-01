@@ -51,7 +51,7 @@ public class StatusUpdateServiceImpl implements StatusUpdateService {
                 JSONObject statusObj = getOrganismFromIndex(statusUpdateDTO.getOrganism(), "statuses_index");
                 String statusResp = updateStatusesIndexWithStatus(statusObj, statusUpdateDTO);
 
-                JSONObject orgObj = getOrganismFromIndex(statusUpdateDTO.getOrganism(), "data_portal_index");
+                JSONObject orgObj = getOrganismFromIndex(statusUpdateDTO.getOrganism(), "data_portal");
                 String orgResp = updateDataPortalIndexWithStatus(orgObj, statusUpdateDTO);
 
                 if(statusResp.contains("error") || orgResp.contains("error"))
@@ -131,7 +131,7 @@ public class StatusUpdateServiceImpl implements StatusUpdateService {
             object.put("trackingSystem",trackStatus);
         }
         String urlEncodedOrganismName = object.get("organism").toString().replaceAll(" ", "%20");
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_doc/"+urlEncodedOrganismName, object.toJSONString());
+        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_doc/"+urlEncodedOrganismName, object.toJSONString());
         return respString;
     }
 

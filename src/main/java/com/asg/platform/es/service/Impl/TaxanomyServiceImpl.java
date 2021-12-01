@@ -71,7 +71,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
 
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", query);
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
 
         return aggregations.toJSONString();
@@ -97,7 +97,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
             esURL = esURL + "/tracking_status_index/_search";
         }
         else if (type.equals("data")) {
-            esURL = esURL + "/data_portal_index/_search";
+            esURL = esURL + "/data_portal/_search";
         }
 
         for (int i = 0; i < taxaTree.size(); i++) {
@@ -138,19 +138,57 @@ public class TaxanomyServiceImpl implements TaxanomyService {
                 String[] filterArray = filter.get().split(",");
                 if (filterArray.length > 0 && !filterArray[0].equals("")) {
                     filtersb.append(",");
-                    filtersb.append("{ 'nested' : { 'path': 'trackingSystem', 'query' : ");
-                    filtersb.append("{ 'bool' : { 'must' : [");
-                    filtersb.append("{ 'terms' : { 'trackingSystem.status':[");
                     for (int i = 0; i < filterArray.length; i++) {
-                        if (i == 0) {
-                            filtersb.append("'" + filterArray[i] + "'");
+                        String[] splitArray = filterArray[i].split("-");
+                        if (splitArray[0].trim().equals("Biosamples")) {
+                            filtersb.append("{'terms' : {'biosamples':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
                         }
-                        else {
-                            filtersb.append(",'" + filterArray[i] + "'");
+                        else if (splitArray[0].trim().equals("Raw data")) {
+                            filtersb.append("{'terms' : {'raw_data':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
+                        }
+                        else if (splitArray[0].trim().equals("Mapped reads")) {
+                            filtersb.append("{'terms' : {'mapped_reads':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
+                        }
+                        else if (splitArray[0].trim().equals("Assemblies")) {
+                            filtersb.append("{'terms' : {'assemblies_status':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
+                        }
+                        else if (splitArray[0].trim().equals("Annotation complete")) {
+                            filtersb.append("{'terms' : {'annotation_complete':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
+                        }
+                        else if (splitArray[0].trim().equals("Annotation")) {
+                            filtersb.append("{'terms' : {'annotation_status':[");
+                            filtersb.append("'" + splitArray[1].trim() + "'");
+                            if (i == (filterArray.length - 1))
+                                filtersb.append("]}}");
+                            else
+                                filtersb.append("]}},");
                         }
                     }
-                    filtersb.append("]}}");
-                    filtersb.append("]}}}}");
                 }
             } else if (type.equals("status")) {
                 String[] filterArray = filter.get().split(",");
@@ -240,35 +278,6 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         rootAggregationObject.put("expanded", false);
         childTaxa.put("rootAggregations", rootAggregationObject);
 
-//        if (!rank.equals("superkingdom")) {
-//            for (int i = 0; i < aggregations.size(); i++) {
-//                StringBuilder currentChildTaxaSb = new StringBuilder();
-//                JSONObject childObj = (JSONObject) aggregations.get(i);
-////TODO: Handle cases where child data length is greater than 1 and has Other, refer to FE for solution
-//
-//                if ((aggregations.size() == 1 && !childObj.get("key").toString().equals("Other")) || aggregations.size() > 1) {
-//                    currentChildTaxaSb.append(hasChildQuery.toString());
-//                    currentChildTaxaSb.append(",{ 'term' : { 'taxonomies.");
-//                    currentChildTaxaSb.append(childRank + "': '" + childObj.get("key") + "'}}");
-//                    currentChildTaxaSb.append("]}}}}");
-//                    currentChildTaxaSb.append(hasChildFilterQuery.toString());
-//                    currentChildTaxaSb.append("]}},");
-//
-//                    currentChildTaxaSb.append("'aggregations':{");
-//                    currentChildTaxaSb.append("'filters': { 'nested': { 'path':'taxonomies'},");
-//                    currentChildTaxaSb.append("'aggs':{");
-//                    currentChildTaxaSb.append("'childRank':{'terms':{'field':'taxonomies." + findChildRank(childRank) + "', 'size': 20000}}");
-//                    currentChildTaxaSb.append("}}");
-//                    currentChildTaxaSb.append("}}");
-//                    String childQuery = currentChildTaxaSb.toString().replaceAll("'", "\"");
-//                    System.out.println(childQuery);
-//                    String rsp = this.postRequest("http://" + esConnectionURL + "/data_portal_index/_search", childQuery);
-//                    JSONArray childAgg = (JSONArray) ((JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(rsp)).get("aggregations")).get("filters")).get("childRank")).get("buckets");
-//                    System.out.println(childAgg);
-//                }
-//            }
-//        }
-
         childTaxa.put("parent", taxonomy);
         childTaxa.put("rank", childRank);
         childTaxa.put("childData", aggregations);
@@ -292,6 +301,26 @@ public class TaxanomyServiceImpl implements TaxanomyService {
                     "CALL apoc.convert.toTree(paths) yield value "+
                     "RETURN value";
             Result result = session.run(query);
+//            List<Record> records = result.list();
+//            for(Record record: records) {
+//                record.keys().forEach(r -> r = "\""+r+"\"");
+//            }
+//            String response = records.toString();
+//            response = response.replaceAll("Record<\\{value:","");
+//            response = response.replaceAll(">","");
+//            response = response.replaceAll(", ",", \"");
+//            response = response.replaceAll(":","\":");
+//            response = response.replaceAll("size","\"size");
+//            response = response.replaceAll("'","\"");
+//            response = response.replaceAll("\"\\{","{");
+//            response = response.replaceAll("\" \\{","{");
+//            response = response.replaceAll("]}},","]},");
+//            response = response.replaceAll("child","children");
+//            response = "{'name': 'Eukaryota', 'children':"+response+"}";
+//            response = response.replaceAll("'", "\"");
+//            response = response.substring(0, response.length() -3);
+//            response = response + "]}";
+
             StringBuilder sb = new StringBuilder();
             while ( result.hasNext() ) {
                 Record record = result.next();

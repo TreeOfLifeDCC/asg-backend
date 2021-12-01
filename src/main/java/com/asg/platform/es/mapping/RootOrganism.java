@@ -10,7 +10,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import java.util.List;
 
 @ApiModel(description = "Root Organism Model")
-@Document(indexName = "data_portal_index", createIndex = false, replicas = 2, shards = 1)
+@Document(indexName = "data_portal", createIndex = false, replicas = 2, shards = 1)
 public class RootOrganism {
     @Id
     String id;

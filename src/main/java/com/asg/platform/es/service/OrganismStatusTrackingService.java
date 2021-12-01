@@ -12,7 +12,7 @@ public interface OrganismStatusTrackingService {
 
     public JSONArray findAll(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder) throws ParseException;
 
-    public long getBiosampleStatusTrackingCount();
+    public long getBiosampleStatusTrackingCount() throws ParseException;
 
     public Map<String, List<JSONObject>> getFilters() throws ParseException;
 
