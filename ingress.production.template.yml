@@ -8,7 +8,7 @@ spec:
   tls:
     - hosts:
         - portal.aquaticsymbiosisgenomics.org
-      secretName: tls-manual-secret
+      secretName: tls-secret
   rules:
     - host: portal.aquaticsymbiosisgenomics.org
       http:
