@@ -53,14 +53,14 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/tracking_status_index/_search", query);
         JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
         return respArray;
     }
 
     @Override
     public long getBiosampleStatusTrackingCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/tracking_status_index/_count");
+        String respString = this.getRequest("https://" + esConnectionURL + "/tracking_status_index/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -78,7 +78,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("'aggregations':{ 'status': {'terms':{'field':'trackingSystem.status'}");
         sb.append("}}}}}}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/tracking_status_index/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("rank");
         JSONArray trackFilterArray = (JSONArray) (aggregations.get("buckets"));
         for(int i=0; i<trackFilterArray.size();i++) {
@@ -178,7 +178,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             }
         }
         else {
-            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem', 'nested_filter':{'term':{'trackingSystem.status':'Done'}}}}");
+            sort.append("{'trackingSystem.rank':{'order':'desc','nested':{'path': 'trackingSystem', 'filter': {'term': {'trackingSystem.status': 'Done'}}}}}");
         }
 
         sort.append("],");

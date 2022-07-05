@@ -54,7 +54,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
         return respArray;
     }
@@ -71,7 +71,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'aggregations':{ 'status': {'terms':{'field':'trackingSystem.status'}");
         sb.append("}}}}}}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("rank");
         JSONArray trackFilterArray = (JSONArray) (aggregations.get("buckets"));
         for(int i=0; i<trackFilterArray.size();i++) {
@@ -126,7 +126,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'organism_part_filter':{'terms':{'field':'records.organismPart', 'size': 2000}}");
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
         JSONArray sexFilter = (JSONArray) ((JSONObject) aggregations.get("sex_filter")).get("buckets");
         JSONArray trackFilter = (JSONArray) ((JSONObject) aggregations.get("tracking_status_filter")).get("buckets");
@@ -146,7 +146,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getSecondaryOrganismFilterResultQuery(organism, filter, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         return respString;
     }
 
@@ -156,7 +156,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getOrganismFilterQuery(filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         return respString;
     }
 
@@ -167,7 +167,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getRootOrganismSearchQuery(search, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
 
         return respString;
     }
@@ -192,7 +192,7 @@ public class RootSampleServiceImpl implements RootSampleService {
             }
         }
         else {
-            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem', 'nested_filter':{'term':{'trackingSystem.status':'Done'}}}}");
+            sort.append("{'trackingSystem.rank':{'order':'desc','nested':{'path': 'trackingSystem', 'filter': {'term': {'trackingSystem.status': 'Done'}}}}}");
         }
         sort.append("],");
 
@@ -418,7 +418,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRootOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
+        String respString = this.getRequest("https://" + esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -426,7 +426,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRelatedOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
+        String respString = this.getRequest("https://" + esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -478,7 +478,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getDistinctRootSamplesByOrganismQuery(size, sortColumn, sortOrder, afterKey);
-        respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        respString = this.postRequest("https://" + esConnectionURL + "/root_samples/_search", query);
         JSONObject res = (JSONObject) new JSONParser().parse(respString);
         return res;
     }
@@ -489,7 +489,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getDistinctRootSamplesCountByOrganismQuery();
-        respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        respString = this.postRequest("https://" + esConnectionURL + "/root_samples/_search", query);
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         String count = ((JSONObject) ((JSONObject) resp.get("aggregations")).get("type_count")).get("value").toString();
         return count;
@@ -516,7 +516,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}}");
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/root_samples/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations"));
         JSONArray accession = (JSONArray) ((JSONObject) aggregations.get("accession")).get("buckets");
 
@@ -533,7 +533,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("']}}]}}}");
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
         JSONObject resp = (JSONObject) ((JSONArray)((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits"))).get("hits")).get(0);
         JSONObject source = (JSONObject) resp.get("_source");
         JSONArray experiment = (JSONArray) source.get("experiment");
