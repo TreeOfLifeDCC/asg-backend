@@ -3,6 +3,7 @@ package com.asg.platform.controller;
 import com.asg.platform.es.service.TaxanomyService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,13 +25,14 @@ public class TaxanomyController {
 
     @ApiOperation(value = "View a list of Eukaryota child Taxanomies")
     @RequestMapping(value = "/{rank}/child", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getChildTaxonomyRank(@RequestParam("filter") Optional<String> filter,
-                                                       @PathVariable("rank") String rank,
-                                                       @RequestParam("taxonomy") String taxonomy,
-                                                       @RequestParam("childRank") String childRank,
-                                                       @RequestParam("type") String type,
-                                                       @RequestBody String taxaTree) throws ParseException {
-        String resp = taxanomyService.getChildTaxonomyRank(filter, rank, taxonomy, childRank, taxaTree, type);
+    public ResponseEntity<String> getChildTaxonomyRank(@ApiParam(example = "Submitted to BioSamples") @RequestParam("filter") Optional<String> filter,
+                                                       @ApiParam(example = "superkingdom") @PathVariable("rank") String rank,
+                                                       @ApiParam(example = "Eukaryota") @RequestParam("taxonomy") String taxonomy,
+                                                       @ApiParam(example = "subkingdom") @RequestParam("childRank") String childRank,
+                                                       @ApiParam(example = "data") @RequestParam("type") String type,
+                                                       @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) Optional<String> search,
+                                                       @ApiParam(example = "[{\"rank\":\"superkingdom\",\"taxonomy\":\"Eukaryota\",\"childRank\":\"kingdom\"}]") @RequestBody String taxaTree) throws ParseException {
+        String resp = taxanomyService.getChildTaxonomyRank(search, filter, rank, taxonomy, childRank, taxaTree, type);
         return new ResponseEntity<String>(resp, HttpStatus.OK);
     }
 

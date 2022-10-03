@@ -72,9 +72,9 @@ public class RootOrganismController {
                                                            @RequestParam(name = "from", required = false, defaultValue = "0") Optional<String> from,
                                                            @RequestParam(value = "size", required = false, defaultValue = "20") Optional<String> size,
                                                            @RequestParam(name = "sortColumn", required = false) Optional<String> sortColumn,
-                                                           @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder,
+                                                           @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder, @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) Optional<String> search,
                                                            @ApiParam(example = "[{\"rank\":\"superkingdom\",\"taxonomy\":\"Eukaryota\",\"childRank\":\"kingdom\"}]") @RequestParam(value = "taxonomyFilter", required = false) Optional<String> taxonomyFilter) throws ParseException {
-        String resp = rootSampleService.findRootOrganismFilterResults(filter, from, size, sortColumn, sortOrder, taxonomyFilter);
+        String resp = rootSampleService.findRootOrganismFilterResults(search,filter, from, size, sortColumn, sortOrder, taxonomyFilter);
         return new ResponseEntity<String>(resp, HttpStatus.OK);
     }
 
@@ -95,6 +95,21 @@ public class RootOrganismController {
     public ResponseEntity<JSONObject> getRootOrganismById(@ApiParam(example = "Lutra lutra") @PathParam("id") String id) throws ParseException {
         JSONObject rs = rootSampleService.findRootSampleById(id);
         return new ResponseEntity<JSONObject>(rs, HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Get Filters for Filtering Root Organisms on Experiment Type")
+    @RequestMapping(value = "/root/experiment-type/filters", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, List<JSONObject>>> getExperimentTypeFilters() throws ParseException {
+        Map<String, List<JSONObject>> resp = rootSampleService.getExperimentTypeFilters();
+        return new ResponseEntity<Map<String, List<JSONObject>>>(resp, HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Get GIS Data for Organisms & Specimens")
+    @RequestMapping(value = "/gis-filter", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getGisData(@ApiParam(example = "Submitted to BioSamples") @RequestBody Optional<String> filter,
+                                             @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) String search) throws ParseException {
+        String resp = rootSampleService.getGisData(search, filter );
+        return new ResponseEntity<String>(resp, HttpStatus.OK);
     }
 
 }
