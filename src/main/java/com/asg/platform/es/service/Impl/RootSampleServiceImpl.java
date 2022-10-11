@@ -443,14 +443,20 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'assemblies': {'terms': {'field': 'assemblies'}},");
         sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
         sb.append("'annotation': {'terms': {'field': 'annotation'}},");
-        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies'},");
+        sb.append("'experiment': { 'nested': { 'path':'experiment'},");
+        sb.append("'aggs':{");
+        sb.append("'library_construction_protocol':{'terms':{'field':'experiment.library_construction_protocol.keyword'},");
+        sb.append("'aggs' : { 'organism_count' : { 'reverse_nested' : {}}");
+        sb.append("}}}},");
+        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
         sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
-        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}}}}}}");
-        sb.append("}");
+        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}},");
+        sb.append("'taxId':{'terms':{'field':'taxonomies.kingdom.tax_id.keyword', 'size': 20000}}}}}}}");
 
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
+
         return query;
     }
 
@@ -698,14 +704,13 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("{");
 
         sb.append("'from' :" + 0 + ",'size':" + 100000 + ",");
-
         sb.append("'query': { 'bool': { 'must': [ ");
-
         if (!StringUtil.isNullOrEmpty(search)) {
             String[] searchArray = search.split(" ");
             for (String temp : searchArray) {
                 searchQuery.append("*" + temp + "*");
             }
+
             sb.append("{'nested': {'path': 'organisms','query': {'bool': {'must': [{'query_string': {");
             sb.append("'query' : '" + searchQuery.toString() + "',");
             sb.append("'fields' : ['organisms.organism.normalize','organisms.commonName.normalize', 'organisms.accession.normalize','organisms.lat','organisms.lng']");
@@ -808,6 +813,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
+      
         return query;
     }
 
