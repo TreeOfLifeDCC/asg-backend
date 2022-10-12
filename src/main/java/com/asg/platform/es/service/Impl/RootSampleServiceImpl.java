@@ -704,7 +704,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("{");
 
         sb.append("'from' :" + 0 + ",'size':" + 100000 + ",");
-        sb.append("'query': { 'bool': { 'must': [ ");
+        sb.append("'query': { 'bool': { 'should': [ ");
         if (!StringUtil.isNullOrEmpty(search)) {
             String[] searchArray = search.split(" ");
             for (String temp : searchArray) {
@@ -813,7 +813,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
-      
+       
         return query;
     }
 
