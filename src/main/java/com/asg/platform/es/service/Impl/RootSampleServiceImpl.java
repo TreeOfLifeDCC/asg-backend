@@ -704,13 +704,15 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("{");
 
         sb.append("'from' :" + 0 + ",'size':" + 100000 + ",");
-        sb.append("'query': { 'bool': { 'should': [ ");
+
+        sb.append("'query': { 'bool': { 'must': [ ");
+
         if (!StringUtil.isNullOrEmpty(search)) {
             String[] searchArray = search.split(" ");
             for (String temp : searchArray) {
                 searchQuery.append("*" + temp + "*");
             }
-
+            sb.append("{ 'bool': { 'should': [ ");
             sb.append("{'nested': {'path': 'organisms','query': {'bool': {'must': [{'query_string': {");
             sb.append("'query' : '" + searchQuery.toString() + "',");
             sb.append("'fields' : ['organisms.organism.normalize','organisms.commonName.normalize', 'organisms.accession.normalize','organisms.lat','organisms.lng']");
@@ -722,7 +724,7 @@ public class RootSampleServiceImpl implements RootSampleService {
             sb.append("'query' : '" + searchQuery.toString() + "',");
             sb.append("'fields' : ['specimens.organism.normalize','specimens.commonName.normalize', 'specimens.accession.normalize','specimens.lat','specimens.lng']");
             sb.append("}}]}}}}");
-            sb.append(",");
+            sb.append("]}},");
 
         }
 
@@ -813,7 +815,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
-       
+
         return query;
     }
 
