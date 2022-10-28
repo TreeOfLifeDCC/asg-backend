@@ -145,11 +145,12 @@ public class TaxanomyServiceImpl implements TaxanomyService {
             }
         }
 
-        if (filter.isPresent()) {
+        if (filter.isPresent() && (!filter.get().equals("undefined") && !filter.get().equals("")) ) {
             if (type.equals("data")) {
                 String[] filterArray = filter.get().split(",");
-                if (filterArray.length > 0 && !filterArray[0].equals("")) {
-                    filtersb.append(",");
+                if(tree != null && tree !="undefined") {
+                    if(((JSONArray) (new JSONParser().parse(tree))).size() > 0)
+                        sb.append(filtersb.toString() + ",");
                     for (int i = 0; i < filterArray.length; i++) {
                         String[] splitArray = filterArray[i].split("-");
                         if (splitArray[0].trim().equals("Biosamples")) {
@@ -322,7 +323,6 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         sb.append("'taxId':{'terms':{'field':'taxonomies." + childRank + ".tax_id.keyword', 'size': 20000}}}}}}");
         sb.append("}}");
         String query = sb.toString().replaceAll("'", "\"");
-
         String respString = this.postRequest(esURL, query);
         JSONArray aggregations = null;
         JSONArray rootAggregations = null;
