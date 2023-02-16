@@ -18,24 +18,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+//@SpringBootTest
+//@AutoConfigureMockMvc
 public class SecondaryOrganismTests {
 
-    @Autowired
-    private MockMvc mockMvc;
+//    @Autowired
+//    private MockMvc mockMvc;
 
-    @MockBean
-    OrganismService organismService;
+//    @MockBean
+//    OrganismService organismService;
 
 //    @Test
 //    void getOrganismDetails() throws Exception {
 //        SecondaryOrganism secondaryOrganism = new SecondaryOrganism();
 //        Optional<String> sortColumn = Optional.of("accession");
 //        Optional<String> sortOrder = Optional.of("asc");
-//
+
 //        when((organismService.findBioSampleByAccession("SAMEA994732"))).thenReturn(secondaryOrganism);
-//
+
 //        this.mockMvc.perform(get("/organisms/SAMEA994732")).andDo(print()).andExpect(status().isOk())
 //                .andExpect(content().string(containsString("")));
 //    }
