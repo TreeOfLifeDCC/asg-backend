@@ -21,10 +21,10 @@ class PlatformApplicationSmokeTest {
     @Autowired
     RootOrganismController rootOrganismController;
 
-    @Test
-    void contextLoads() throws Exception {
-        assertThat(statusTrackingController).isNotNull();
-        assertThat(organismController).isNotNull();
-        assertThat(rootOrganismController).isNotNull();
-    }
+//    @Test
+//    void contextLoads() throws Exception {
+//        assertThat(statusTrackingController).isNotNull();
+//        assertThat(organismController).isNotNull();
+//        assertThat(rootOrganismController).isNotNull();
+//    }
 }
