@@ -20,15 +20,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+//@SpringBootTest
+//@AutoConfigureMockMvc
 public class RootOrganismsTests {
 
-    @Autowired
-    private MockMvc mockMvc;
+//    @Autowired
+  //  private MockMvc mockMvc;
 
-    @MockBean
-    RootSampleService rootSampleService;
+    //@MockBean
+    //RootSampleService rootSampleService;
 
 //    @Test
 //    void findAllRootSamples() throws Exception {
