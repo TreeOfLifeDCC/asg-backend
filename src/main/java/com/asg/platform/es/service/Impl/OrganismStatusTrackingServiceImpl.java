@@ -357,11 +357,9 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         }
 
         sb.append("'aggregations': {");
-
         sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
         sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
         sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
-
         sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
         sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
         sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
@@ -421,6 +419,13 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("}},");
 
         sb.append("'aggregations': {");
+        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
+        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
+        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
+        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
+        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
+        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
+
         sb.append("'biosamples': {'terms': {'field': 'biosamples.keyword'}},");
         sb.append("'raw_data': {'terms': {'field': 'raw_data.keyword'}},");
         sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads.keyword'}},");
