@@ -361,33 +361,33 @@ public class RootSampleServiceImpl implements RootSampleService {
                     sb.append("]}}}}}},");
                 } else if (splitArray[0].trim().equals("symbiontsBioSamplesStatus")) {
                     String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsBioSamplesStatus-", "");
-                    sb.append("{'terms' : {'symbionts_biosamples_status':[");
+                    sb.append("{'terms' : {'symbionts_biosamples_status.keyword':[");
                     sb.append("'" + symbiontsStatusFilter.trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("symbiontsRawDataStatus")) {
                     String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsRawDataStatus-", "");
-                    sb.append("{'terms' : {'symbionts_raw_data_status':[");
+                    sb.append("{'terms' : {'symbionts_raw_data_status.keyword':[");
                     sb.append("'" + symbiontsStatusFilter.trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("symbiontsAssembliesStatus")) {
                     String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsAssembliesStatus-", "");
-                    sb.append("{'terms' : {'symbionts_assemblies_status':[");
+                    sb.append("{'terms' : {'symbionts_assemblies_status.keyword':[");
                     sb.append("'" + symbiontsStatusFilter.trim() + "'");
                     sb.append("]}},");
 
                 }else if (splitArray[0].trim().equals("metagenomesBioSamplesStatus")) {
                     String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesBioSamplesStatus-", "");
-                    sb.append("{'terms' : {'metagenomes_biosamples_status':[");
+                    sb.append("{'terms' : {'metagenomes_biosamples_status.keyword':[");
                     sb.append("'" + metagenomesStatusFilter.trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("metagenomesRawDataStatus")) {
                     String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesRawDataStatus-", "");
-                    sb.append("{'terms' : {'metagenomes_raw_data_status':[");
+                    sb.append("{'terms' : {'metagenomes_raw_data_status.keyword':[");
                     sb.append("'" + metagenomesStatusFilter.trim() + "'");
                     sb.append("]}},");
                 } else if (splitArray[0].trim().equals("metagenomesAssembliesStatus")) {
                     String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesAssembliesStatus-", "");
-                    sb.append("{'terms' : {'metagenomes_assemblies_status':[");
+                    sb.append("{'terms' : {'metagenomes_assemblies_status.keyword':[");
                     sb.append("'" + metagenomesStatusFilter.trim() + "'");
                     sb.append("]}},");
                 }
@@ -433,13 +433,13 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
         sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
 
-        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
-        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
-        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
+        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status.keyword'}},");
+        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status.keyword'}},");
+        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status.keyword'}},");
 
-        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
-        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
-        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
+        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status.keyword'}},");
+        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status.keyword'}},");
+        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status.keyword'}},");
 
         sb.append("'annotation': {'terms': {'field': 'annotation_status'}},");
         sb.append("'experiment': { 'nested': { 'path':'experiment'},");
@@ -492,13 +492,13 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
         sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
 
-        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
-        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
-        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
+        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status.keyword'}},");
+        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status.keyword'}},");
+        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status.keyword'}},");
 
-        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
-        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
-        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
+        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status.keyword'}},");
+        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status.keyword'}},");
+        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status.keyword'}},");
 
         sb.append("'annotation': {'terms': {'field': 'annotation_status'}},");
         sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
