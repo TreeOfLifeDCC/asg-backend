@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface RootSampleService {
 
-    public JSONArray findAllOrganisms(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder) throws ParseException;
+    String findAllOrganisms(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder,Optional<String> search, Optional<String> filter, Optional<String> taxonomyFilter) throws ParseException;
 
     public Map<String, List<JSONObject>> getRootOrganismFilters() throws ParseException;
 
@@ -21,7 +21,7 @@ public interface RootSampleService {
 
     public String findSecondaryOrganismFilterResults(String organism, String filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder);
 
-    public String findRootOrganismFilterResults(Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException;
+    public String findRootOrganismFilterResults(Optional<String> search, Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException;
 
     public long getRootOrganismCount() throws ParseException;
 
@@ -41,4 +41,7 @@ public interface RootSampleService {
 
     public JSONObject findRootSampleById(String id) throws ParseException;
 
+    Map<String, List<JSONObject>> getExperimentTypeFilters() throws ParseException;
+
+    String getGisData(String search, Optional<String> filter) throws ParseException;
 }

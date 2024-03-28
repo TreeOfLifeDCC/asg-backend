@@ -7,6 +7,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,16 +31,21 @@ public class RootOrganismController {
     RootSampleService rootSampleService;
 
     @ApiOperation(value = "View a list of Root Organisms")
-    @RequestMapping(value = "", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HashMap<String, Object>> getAllRootOrganisms(@RequestParam(name = "offset", required = false, defaultValue = "0") int offset,
                                                                        @RequestParam(value = "limit", required = false, defaultValue = "10") int limit,
                                                                        @RequestParam(name = "sortColumn", required = false) Optional<String> sortColumn,
-                                                                       @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder) throws ParseException {
+                                                                       @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder,
+                                                                       @ApiParam(example = "Submitted to BioSamples") @RequestBody Optional<String> filter,
+                                                                       @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) Optional<String> search,
+                                                                       @ApiParam(example = "[{\"rank\":\"superkingdom\",\"taxonomy\":\"Eukaryota\",\"childRank\":\"kingdom\"}]") @RequestParam(value = "taxonomyFilter", required = false) Optional<String> taxonomyFilter) throws ParseException {
         HashMap<String, Object> response = new HashMap<>();
-        JSONArray resp = rootSampleService.findAllOrganisms(offset, limit, sortColumn, sortOrder);
+        String resp = rootSampleService.findAllOrganisms(offset, limit, sortColumn, sortOrder,search,filter,taxonomyFilter);
         long count = rootSampleService.getRootOrganismCount();
-        response.put("rootSamples", resp);
-        response.put("count", count);
+        response.put("rootSamples", ((JSONObject) new JSONParser().parse(resp)));
+        JSONObject countVAlue = (JSONObject) new JSONParser().parse(resp);
+
+        response.put("count", (Long) ((JSONObject)((JSONObject) countVAlue.get("hits")).get("total")).get("value"));
         return new ResponseEntity<HashMap<String, Object>>(response, HttpStatus.OK);
     }
 
@@ -72,9 +78,9 @@ public class RootOrganismController {
                                                            @RequestParam(name = "from", required = false, defaultValue = "0") Optional<String> from,
                                                            @RequestParam(value = "size", required = false, defaultValue = "20") Optional<String> size,
                                                            @RequestParam(name = "sortColumn", required = false) Optional<String> sortColumn,
-                                                           @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder,
+                                                           @RequestParam(value = "sortOrder", required = false) Optional<String> sortOrder, @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) Optional<String> search,
                                                            @ApiParam(example = "[{\"rank\":\"superkingdom\",\"taxonomy\":\"Eukaryota\",\"childRank\":\"kingdom\"}]") @RequestParam(value = "taxonomyFilter", required = false) Optional<String> taxonomyFilter) throws ParseException {
-        String resp = rootSampleService.findRootOrganismFilterResults(filter, from, size, sortColumn, sortOrder, taxonomyFilter);
+        String resp = rootSampleService.findRootOrganismFilterResults(search,filter, from, size, sortColumn, sortOrder, taxonomyFilter);
         return new ResponseEntity<String>(resp, HttpStatus.OK);
     }
 
@@ -95,6 +101,21 @@ public class RootOrganismController {
     public ResponseEntity<JSONObject> getRootOrganismById(@ApiParam(example = "Lutra lutra") @PathParam("id") String id) throws ParseException {
         JSONObject rs = rootSampleService.findRootSampleById(id);
         return new ResponseEntity<JSONObject>(rs, HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Get Filters for Filtering Root Organisms on Experiment Type")
+    @RequestMapping(value = "/root/experiment-type/filters", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, List<JSONObject>>> getExperimentTypeFilters() throws ParseException {
+        Map<String, List<JSONObject>> resp = rootSampleService.getExperimentTypeFilters();
+        return new ResponseEntity<Map<String, List<JSONObject>>>(resp, HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Get GIS Data for Organisms & Specimens")
+    @RequestMapping(value = "/gis-filter", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getGisData(@ApiParam(example = "Submitted to BioSamples") @RequestBody Optional<String> filter,
+                                             @ApiParam(example = "Salmo") @RequestParam(value = "searchText", required = false) String search) throws ParseException {
+        String resp = rootSampleService.getGisData(search, filter );
+        return new ResponseEntity<String>(resp, HttpStatus.OK);
     }
 
 }

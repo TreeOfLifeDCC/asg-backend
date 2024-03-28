@@ -168,7 +168,9 @@ public class OrganismServiceImpl implements OrganismService {
         sb.append("']}}]}}}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
+
+        String respString = this.postRequest("http://" + esConnectionURL + "/specimens_test/_search", query);
+
 
         return respString;
     }

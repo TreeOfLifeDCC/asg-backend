@@ -4,6 +4,7 @@ import com.asg.platform.es.mapping.RootOrganism;
 import com.asg.platform.es.mapping.SecondaryOrganism;
 import com.asg.platform.es.repository.RootOrganismRepository;
 import com.asg.platform.es.service.RootSampleService;
+import io.netty.util.internal.StringUtil;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -40,9 +41,10 @@ public class RootSampleServiceImpl implements RootSampleService {
     RootOrganismRepository rootOrganismRepository;
     @Value("${ES_CONNECTION_URL}")
     String esConnectionURL;
+    static final String [] taxaRankArray = {"superkingdom", "kingdom","subkingdom","superphylum","phylum","subphylum","superclass","class","subclass","infraclass","cohort","subcohort","superorder","order","suborder","infraorder","parvorder","section","subsection","superfamily","family","subfamily","tribe","subtribe","genus","series","subgenus","species_group","species_subgroup","species","subspecies","varietas","forma"};
 
     @Override
-    public JSONArray findAllOrganisms(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder) throws ParseException {
+    public String findAllOrganisms(int page, int size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> search, Optional<String> filter, Optional<String> taxonomyFilter) throws ParseException {
         StringBuilder sb = new StringBuilder();
         StringBuilder sort = this.getSortQuery(sortColumn, sortOrder);
 
@@ -54,9 +56,11 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
-        JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
-        return respArray;
+
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search",  getOrganismFilterQuery(search, filter, String.valueOf(page),String.valueOf(size), sortColumn, sortOrder,  taxonomyFilter));
+//        JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
+        return respString;
+
     }
 
     @Override
@@ -151,12 +155,17 @@ public class RootSampleServiceImpl implements RootSampleService {
     }
 
     @Override
-    public String findRootOrganismFilterResults(Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException {
+    public String findRootOrganismFilterResults(Optional<String> search, Optional<String> filter, Optional<String> from, Optional<String> size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException {
         String respString = null;
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
-        String query = this.getOrganismFilterQuery(filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
-        respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
+
+
+
+        String query = this.getOrganismFilterQuery(search, filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
+        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+
+
         return respString;
     }
 
@@ -240,10 +249,22 @@ public class RootSampleServiceImpl implements RootSampleService {
         return query;
     }
 
-    private String getOrganismFilterQuery(Optional<String> filter, String from, String size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException {
+
+    private String getOrganismFilterQuery(Optional<String> search, Optional<String> filter, String from, String size, Optional<String> sortColumn, Optional<String> sortOrder, Optional<String> taxonomyFilter) throws ParseException {
         StringBuilder sb = new StringBuilder();
         StringBuilder sbt = new StringBuilder();
         StringBuilder sort = this.getSortQuery(sortColumn, sortOrder);
+        Boolean isPhylogenyFilter = false;
+        String phylogenyRank = "";
+        String phylogenyTaxId = "";
+        StringBuilder searchQuery = new StringBuilder();
+
+        if (search.isPresent()) {
+            String[] searchArray = search.get().split(" ");
+            for (String temp : searchArray) {
+                searchQuery.append("*" + temp + "*");
+            }
+        }
 
         sb.append("{");
         if (!from.equals("undefined") && !size.equals("undefined"))
@@ -251,6 +272,17 @@ public class RootSampleServiceImpl implements RootSampleService {
         if (sort.length() != 0)
             sb.append(sort);
         sb.append("'query' : { 'bool' : { 'must' : [");
+
+        if (searchQuery.length() != 0) {
+            sb.append("{'multi_match': {");
+            sb.append("'operator': 'AND',");
+            sb.append("'query' : '" + searchQuery.toString() + "',");
+            sb.append("'fields' : ['organism.autocomp', 'commonName.autocomp', 'biosamples.autocomp','raw_data.autocomp'," +
+                    "'mapped_reads.autocomp'," +
+                    "'assemblies_status.autocomp','annotation_complete.autocomp','annotation_status.autocomp', " +
+                    "'symbionts_records.organism.text.autocomp', 'metagenomes_records.organism.text.autocomp']");
+            sb.append("}},");
+        }
 
         if (taxonomyFilter.isPresent() && !taxonomyFilter.get().equals("undefined")) {
             String taxArray = taxonomyFilter.get().toString();
@@ -260,7 +292,7 @@ public class RootSampleServiceImpl implements RootSampleService {
                     JSONObject taxa = (JSONObject) taxaTree.get(i);
                     if (taxaTree.size() == 1) {
                         sbt.append("{ 'nested' : { 'path': 'taxonomies', 'query' : ");
-                        sbt.append("{ 'nested' : { 'path': 'taxonomies."+taxa.get("rank")+"', 'query' : ");
+                        sbt.append("{ 'nested' : { 'path': 'taxonomies." + taxa.get("rank") + "', 'query' : ");
                         sbt.append("{ 'bool' : { 'must' : [");
                         sbt.append("{ 'term' : { 'taxonomies.");
                         sbt.append(taxa.get("rank") + ".scientificName': '" + taxa.get("taxonomy") + "'}}");
@@ -268,14 +300,14 @@ public class RootSampleServiceImpl implements RootSampleService {
                     } else {
                         if (i == taxaTree.size() - 1) {
                             sbt.append("{ 'nested' : { 'path': 'taxonomies', 'query' : ");
-                            sbt.append("{ 'nested' : { 'path': 'taxonomies."+taxa.get("rank")+"', 'query' : ");
+                            sbt.append("{ 'nested' : { 'path': 'taxonomies." + taxa.get("rank") + "', 'query' : ");
                             sbt.append("{ 'bool' : { 'must' : [");
                             sbt.append("{ 'term' : { 'taxonomies.");
                             sbt.append(taxa.get("rank") + ".scientificName': '" + taxa.get("taxonomy") + "'}}");
                             sbt.append("]}}}}}}");
                         } else {
                             sbt.append("{ 'nested' : { 'path': 'taxonomies', 'query' : ");
-                            sbt.append("{ 'nested' : { 'path': 'taxonomies."+taxa.get("rank")+"', 'query' : ");
+                            sbt.append("{ 'nested' : { 'path': 'taxonomies." + taxa.get("rank") + "', 'query' : ");
                             sbt.append("{ 'bool' : { 'must' : [");
                             sbt.append("{ 'term' : { 'taxonomies.");
                             sbt.append(taxa.get("rank") + ".scientificName': '" + taxa.get("taxonomy") + "'}}");
@@ -288,7 +320,12 @@ public class RootSampleServiceImpl implements RootSampleService {
 
         if (filter.isPresent() && (!filter.get().equals("undefined") && !filter.get().equals(""))) {
             String[] filterArray = filter.get().split(",");
-            sb.append(sbt.toString() + ",");
+            if(taxonomyFilter.isPresent() && !taxonomyFilter.get().equals("undefined")) {
+                String taxArray = taxonomyFilter.get().toString();
+                JSONArray taxaTree = (JSONArray) (new JSONParser().parse(taxArray));
+                if(taxaTree.size() > 0)
+                    sb.append(sbt.toString() + ",");
+            }
             for (int i = 0; i < filterArray.length; i++) {
                 String[] splitArray = filterArray[i].split("-");
 
@@ -316,6 +353,57 @@ public class RootSampleServiceImpl implements RootSampleService {
                     sb.append("{'terms' : {'annotation_status':[");
                     sb.append("'" + splitArray[1].trim() + "'");
                     sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Genome Notes")) {
+                    sb.append("{ 'nested': {'path': 'genome_notes','query': {'bool': {'must': [{'exists': {'field': 'genome_notes.url'}}]}}}},");
+                } else if (Arrays.asList(taxaRankArray).contains(splitArray[0].trim())) {
+                    isPhylogenyFilter = true;
+                    phylogenyRank = splitArray[0].trim();
+                    phylogenyTaxId = splitArray[1].trim();
+                    sb.append("{ 'nested' : { 'path': 'taxonomies', 'query' : ");
+                    sb.append("{ 'nested' : { 'path': 'taxonomies." + splitArray[0].trim() + "', 'query' : ");
+                    sb.append("{ 'bool' : { 'must' : [");
+                    sb.append("{ 'term' : { 'taxonomies.");
+                    sb.append(splitArray[0].trim() + ".tax_id': '" + splitArray[1].trim() + "'}}");
+                    sb.append("]}}}}}},");
+                } else if (splitArray[0].trim().equals("symbiontsBioSamplesStatus")) {
+                    String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsBioSamplesStatus-", "");
+                    sb.append("{'terms' : {'symbionts_biosamples_status':[");
+                    sb.append("'" + symbiontsStatusFilter.trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("symbiontsRawDataStatus")) {
+                    String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsRawDataStatus-", "");
+                    sb.append("{'terms' : {'symbionts_raw_data_status':[");
+                    sb.append("'" + symbiontsStatusFilter.trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("symbiontsAssembliesStatus")) {
+                    String symbiontsStatusFilter = filterArray[i].trim().replaceFirst("symbiontsAssembliesStatus-", "");
+                    sb.append("{'terms' : {'symbionts_assemblies_status':[");
+                    sb.append("'" + symbiontsStatusFilter.trim() + "'");
+                    sb.append("]}},");
+
+                }else if (splitArray[0].trim().equals("metagenomesBioSamplesStatus")) {
+                    String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesBioSamplesStatus-", "");
+                    sb.append("{'terms' : {'metagenomes_biosamples_status':[");
+                    sb.append("'" + metagenomesStatusFilter.trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("metagenomesRawDataStatus")) {
+                    String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesRawDataStatus-", "");
+                    sb.append("{'terms' : {'metagenomes_raw_data_status':[");
+                    sb.append("'" + metagenomesStatusFilter.trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("metagenomesAssembliesStatus")) {
+                    String metagenomesStatusFilter = filterArray[i].trim().replaceFirst("metagenomesAssembliesStatus-", "");
+                    sb.append("{'terms' : {'metagenomes_assemblies_status':[");
+                    sb.append("'" + metagenomesStatusFilter.trim() + "'");
+                    sb.append("]}},");
+                }
+
+                else if (splitArray[0].trim().equals("experimentType")) {
+                    String experimentTypeFilter = filterArray[i].trim().replaceFirst("experimentType-", "");
+                    sb.append("{ 'nested' : { 'path': 'experiment', 'query' : ");
+                    sb.append("{ 'bool' : { 'must' : [");
+                    sb.append("{ 'term' : { 'experiment.library_construction_protocol.keyword' : '"+ experimentTypeFilter.trim()+ "'"  );
+                    sb.append("}}]}}}},");
                 }
             }
             sb.append("]}},");
@@ -327,15 +415,22 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'aggregations': {");
         sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
         sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
-        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}}}}}},");
-        if (taxonomyFilter.isPresent() && !taxonomyFilter.get().equals("undefined")) {
+        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}},");
+        sb.append("'taxId':{'terms':{'field':'taxonomies.kingdom.tax_id.keyword', 'size': 20000}}}}}},");
+        if (taxonomyFilter.isPresent() && !taxonomyFilter.get().equals("undefined") && !isPhylogenyFilter) {
             JSONArray taxaTree = (JSONArray) new JSONParser().parse(taxonomyFilter.get().toString());
             if (taxaTree.size() > 0) {
                 JSONObject taxa = (JSONObject) taxaTree.get(taxaTree.size() - 1);
-                sb.append("'childRank': { 'nested': { 'path':'taxonomies."+ taxa.get("childRank")+"'},");
-                sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies."+taxa.get("childRank")+".scientificName', 'size': 20000},");
-                sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies."+taxa.get("childRank")+".commonName', 'size': 20000}}}}}},");
+                sb.append("'childRank': { 'nested': { 'path':'taxonomies." + taxa.get("childRank") + "'},");
+                sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies." + taxa.get("childRank") + ".scientificName', 'size': 20000},");
+                sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies." + taxa.get("childRank") + ".commonName', 'size': 20000}},");
+                sb.append("'taxId':{'terms':{'field':'taxonomies." + taxa.get("childRank") + ".tax_id.keyword', 'size': 20000}}}}}},");
             }
+        } else if (isPhylogenyFilter) {
+            sb.append("'childRank': { 'nested': { 'path':'taxonomies." + phylogenyRank + "'},");
+            sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies." + phylogenyRank + ".scientificName', 'size': 20000},");
+            sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies." + phylogenyRank + ".commonName', 'size': 20000}},");
+            sb.append("'taxId':{'terms':{'field':'taxonomies." + phylogenyRank + ".tax_id.keyword', 'size': 20000}}}}}},");
         }
 
         sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
@@ -343,12 +438,33 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
         sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
         sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
-        sb.append("'annotation': {'terms': {'field': 'annotation_status'}}");
+
+        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
+        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
+        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
+
+        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
+        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
+        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
+
+        sb.append("'annotation': {'terms': {'field': 'annotation_status'}},");
+        sb.append("'experiment': { 'nested': { 'path':'experiment'},");
+
+        sb.append("'aggs':{");
+        sb.append("'library_construction_protocol':{'terms':{'field':'experiment.library_construction_protocol.keyword'},");
+        sb.append("'aggs' : { 'organism_count' : { 'reverse_nested' : {}}");
+        sb.append("}}}},");
+        sb.append("'genome': { 'nested': { 'path':'genome_notes'},");
+        sb.append("'aggs':{");
+        sb.append("'genome_count':{'cardinality':{'field':'genome_notes.id'}");
+        sb.append("}}}");
+
         sb.append("}");
 
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
+
         return query;
     }
 
@@ -368,6 +484,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         }
         if (sort.length() != 0)
             sb.append(sort);
+
         sb.append("'query': {");
         sb.append("'query_string': {");
         sb.append("'query' : '" + searchQuery.toString() + "',");
@@ -378,17 +495,36 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
         sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
         sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
-        sb.append("'assemblies': {'terms': {'field': 'assemblies'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
         sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
-        sb.append("'annotation': {'terms': {'field': 'annotation'}},");
-        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies'},");
-        sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
-        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}}}}}}");
-        sb.append("}");
 
+        sb.append("'metagenomes_biosamples_status': {'terms': {'field': 'metagenomes_biosamples_status'}},");
+        sb.append("'metagenomes_raw_data_status': {'terms': {'field': 'metagenomes_raw_data_status'}},");
+        sb.append("'metagenomes_assemblies_status': {'terms': {'field': 'metagenomes_assemblies_status'}},");
+
+        sb.append("'symbionts_biosamples_status': {'terms': {'field': 'symbionts_biosamples_status'}},");
+        sb.append("'symbionts_raw_data_status': {'terms': {'field': 'symbionts_raw_data_status'}},");
+        sb.append("'symbionts_assemblies_status': {'terms': {'field': 'symbionts_assemblies_status'}},");
+
+        sb.append("'annotation': {'terms': {'field': 'annotation_status'}},");
+        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
+        sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
+        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}},");
+        sb.append("'taxId':{'terms':{'field':'taxonomies.kingdom.tax_id.keyword', 'size': 20000}}}}}},");
+        sb.append("'experiment': { 'nested': { 'path':'experiment'},");
+        sb.append("'aggs':{");
+        sb.append("'library_construction_protocol':{'terms':{'field':'experiment.library_construction_protocol.keyword'},");
+        sb.append("'aggs' : { 'organism_count' : { 'reverse_nested' : {}}");
+        sb.append("}}}},");
+        sb.append("'genome': { 'nested': { 'path':'genome_notes'},");
+        sb.append("'aggs':{");
+        sb.append("'genome_count':{'cardinality':{'field':'genome_notes.id'}");
+        sb.append("}}}");
+        sb.append("}");
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
+
         return query;
     }
 
@@ -582,5 +718,175 @@ public class RootSampleServiceImpl implements RootSampleService {
         }
         return resp;
     }
+    public Map<String, List<JSONObject>> getExperimentTypeFilters() throws ParseException {
+        Map<String, List<JSONObject>> filterMap = new HashMap<>();
+        StringBuilder sb = new StringBuilder();
+        sb.append("{'size':0, 'aggregations':{");
+        sb.append("'experiment': { 'nested': { 'path':'experiment'},");
+        sb.append("'aggs':{");
+        sb.append("'library_construction_protocol':{'terms':{'field':'experiment.library_construction_protocol.keyword'},");
+        sb.append("'aggs' : { 'organism_count' : { 'reverse_nested' : {}}");
+        sb.append("}}}}}}");
+
+
+
+        String query = sb.toString().replaceAll("'", "\"");
+
+        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("experiment")).get("library_construction_protocol");
+        JSONArray libraryConstructionProtocol = (JSONArray) (aggregations.get("buckets"));
+
+        List<JSONObject> libraryConstructionArray = new ArrayList<JSONObject>();
+        for (int j = 0; j < libraryConstructionProtocol.size(); j++) {
+            JSONObject temp = (JSONObject) libraryConstructionProtocol.get(j);
+            JSONObject filterObj = new JSONObject();
+            filterObj.put("key",   temp.get("key"));
+            filterObj.put("organism_count", ((JSONObject ) temp.get("organism_count")));
+            libraryConstructionArray.add(filterObj);
+
+        }
+        filterMap.put("Experiment_type",libraryConstructionArray);
+        return filterMap;
+    }
+
+    @Override
+    public String getGisData(String search, Optional<String> filter) throws ParseException {
+        StringBuilder sb = new StringBuilder();
+        String query = sb.toString().replaceAll("'", "\"");
+        String respString = this.postRequest("http://" + esConnectionURL + "/gis_filter_data/_search", getGisFilterQuery(filter,search));
+
+        return respString;
+    }
+
+
+
+    private String getGisFilterQuery( Optional<String> filter, String search) throws ParseException {
+        StringBuilder sb = new StringBuilder();
+        StringBuilder sbt = new StringBuilder();
+
+        Boolean isPhylogenyFilter = false;
+        String phylogenyRank = "";
+        String phylogenyTaxId = "";
+        StringBuilder searchQuery = new StringBuilder();
+
+        sb.append("{");
+
+        sb.append("'from' :" + 0 + ",'size':" + 100000 + ",");
+
+        sb.append("'query': { 'bool': { 'must': [ ");
+
+        if (!StringUtil.isNullOrEmpty(search)) {
+            String[] searchArray = search.split(" ");
+            for (String temp : searchArray) {
+                searchQuery.append("*" + temp + "*");
+            }
+            sb.append("{ 'bool': { 'should': [ ");
+            sb.append("{'nested': {'path': 'organisms','query': {'bool': {'must': [{'query_string': {");
+            sb.append("'query' : '" + searchQuery.toString() + "',");
+            sb.append("'fields' : ['organisms.organism.normalize','organisms.commonName.normalize', 'organisms.accession.normalize','organisms.lat','organisms.lng']");
+            sb.append("}}]}}}}");
+
+            sb.append(",");
+
+            sb.append("{'nested': {'path': 'specimens','query': {'bool': {'must': [{'query_string': {");
+            sb.append("'query' : '" + searchQuery.toString() + "',");
+            sb.append("'fields' : ['specimens.organism.normalize','specimens.commonName.normalize', 'specimens.accession.normalize','specimens.lat','specimens.lng']");
+            sb.append("}}]}}}}");
+            sb.append("]}},");
+
+        }
+
+        if (filter.isPresent() && (!filter.get().equals("undefined") && !filter.get().equals(""))) {
+            String[] filterArray = filter.get().split(",");
+            for (int i = 0; i < filterArray.length; i++) {
+                String[] splitArray = filterArray[i].split("-");
+
+                if (splitArray[0].trim().equals("Biosamples")) {
+                    sb.append("{'terms' : {'biosamples':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Raw data")) {
+                    sb.append("{'terms' : {'raw_data':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Mapped reads")) {
+                    sb.append("{'terms' : {'mapped_reads':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Assemblies")) {
+                    sb.append("{'terms' : {'assemblies_status':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Annotation complete")) {
+                    sb.append("{'terms' : {'annotation_complete':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Annotation")) {
+                    sb.append("{'terms' : {'annotation_status':[");
+                    sb.append("'" + splitArray[1].trim() + "'");
+                    sb.append("]}},");
+                } else if (splitArray[0].trim().equals("Genome Notes")) {
+                    sb.append("{ 'nested': {'path': 'genome_notes','query': {'bool': {'must': [{'exists': {'field': 'genome_notes.url'}}]}}}},");
+                } else if (Arrays.asList(taxaRankArray).contains(splitArray[0].trim())) {
+                    isPhylogenyFilter = true;
+                    phylogenyRank = splitArray[0].trim();
+                    phylogenyTaxId = splitArray[1].trim();
+                    sb.append("{ 'nested' : { 'path': 'taxonomies', 'query' : ");
+                    sb.append("{ 'nested' : { 'path': 'taxonomies." + splitArray[0].trim() + "', 'query' : ");
+                    sb.append("{ 'bool' : { 'must' : [");
+                    sb.append("{ 'term' : { 'taxonomies.");
+                    sb.append(splitArray[0].trim() + ".tax_id': '" + splitArray[1].trim() + "'}}");
+                    sb.append("]}}}}}},");
+                } else if (splitArray[0].trim().equals("experimentType")) {
+                    String experimentTypeFilter = filterArray[i].trim().replaceFirst("experimentType-", "");
+                    sb.append("{ 'nested' : { 'path': 'experiment', 'query' : ");
+                    sb.append("{ 'bool' : { 'must' : [");
+                    sb.append("{ 'term' : { 'experiment.library_construction_protocol.keyword' : '"+ experimentTypeFilter.trim()+ "'"  );
+                    sb.append("}}]}}}},");
+                }
+            }
+            sb.append("]}},");
+        } else {
+            sb.append(sbt.toString());
+            sb.append("]}},");
+        }
+
+        sb.append("'aggregations': {");
+        sb.append("'kingdomRank': { 'nested': { 'path':'taxonomies.kingdom'},");
+        sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies.kingdom.scientificName', 'size': 20000},");
+        sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies.kingdom.commonName', 'size': 20000}},");
+        sb.append("'taxId':{'terms':{'field':'taxonomies.kingdom.tax_id.keyword', 'size': 20000}}}}}},");
+        if (isPhylogenyFilter) {
+            sb.append("'childRank': { 'nested': { 'path':'taxonomies." + phylogenyRank + "'},");
+            sb.append("'aggs':{'scientificName':{'terms':{'field':'taxonomies." + phylogenyRank + ".scientificName', 'size': 20000},");
+            sb.append("'aggs':{'commonName':{'terms':{'field':'taxonomies." + phylogenyRank + ".commonName', 'size': 20000}},");
+            sb.append("'taxId':{'terms':{'field':'taxonomies." + phylogenyRank + ".tax_id.keyword', 'size': 20000}}}}}},");
+        }
+
+        sb.append("'biosamples': {'terms': {'field': 'biosamples'}},");
+        sb.append("'raw_data': {'terms': {'field': 'raw_data'}},");
+        sb.append("'mapped_reads': {'terms': {'field': 'mapped_reads'}},");
+        sb.append("'assemblies': {'terms': {'field': 'assemblies_status'}},");
+        sb.append("'annotation_complete': {'terms': {'field': 'annotation_complete'}},");
+        sb.append("'annotation': {'terms': {'field': 'annotation_status'}},");
+        sb.append("'experiment': { 'nested': { 'path':'experiment'},");
+        sb.append("'aggs':{");
+        sb.append("'library_construction_protocol':{'terms':{'field':'experiment.library_construction_protocol.keyword'},");
+        sb.append("'aggs' : { 'organism_count' : { 'reverse_nested' : {}}");
+        sb.append("}}}},");
+        sb.append("'genome': { 'nested': { 'path':'genome_notes'},");
+        sb.append("'aggs':{");
+        sb.append("'genome_count':{'cardinality':{'field':'genome_notes.id'}");
+        sb.append("}}}");
+
+        sb.append("}");
+
+        sb.append("}");
+
+        String query = sb.toString().replaceAll("'", "\"").replaceAll(",]", "]");
+        return query;
+    }
+
+
 
 }
