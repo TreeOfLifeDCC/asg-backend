@@ -30,10 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
@@ -46,6 +43,12 @@ public class OrganismServiceImpl implements OrganismService {
     OrganismRepository organismRepository;
     @Value("${ES_CONNECTION_URL}")
     String esConnectionURL;
+
+    @Value("${ES_USERNAME}")
+    String esUsername;
+
+    @Value("${ES_PASSWORD}")
+    String esPassword;
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
@@ -130,7 +133,7 @@ public class OrganismServiceImpl implements OrganismService {
         sb.append("'organism_part_filter':{'terms':{'field':'records.organismPart', 'size': 2000}}");
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/organisms_test/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/organisms_test/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
         JSONArray sexFilter = (JSONArray) ((JSONObject) aggregations.get("sex_filter")).get("buckets");
         JSONArray orgPartFilterObj = (JSONArray) ((JSONObject) aggregations.get("organism_part_filter")).get("buckets");
@@ -152,7 +155,7 @@ public class OrganismServiceImpl implements OrganismService {
         sb.append("']}}]}}}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/organisms_test/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/organisms_test/_search", query);
 
         return respString;
     }
@@ -169,10 +172,15 @@ public class OrganismServiceImpl implements OrganismService {
 
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/specimens_test/_search", query);
+        String respString = this.postRequest(esConnectionURL + "/specimens_test/_search", query);
 
 
         return respString;
+    }
+
+    private static final String getBasicAuthenticationHeader(String username, String password) {
+        String valueToEncode = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
     }
 
     private String postRequest(String baseURL, String body) {
@@ -185,6 +193,8 @@ public class OrganismServiceImpl implements OrganismService {
             httpPost.setEntity(entity);
             httpPost.setHeader("Accept", "application/json");
             httpPost.setHeader("Content-type", "application/json");
+            httpPost.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
+
             CloseableHttpResponse rs = client.execute(httpPost);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
