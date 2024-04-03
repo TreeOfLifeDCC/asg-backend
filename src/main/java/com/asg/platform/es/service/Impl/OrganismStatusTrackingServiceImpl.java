@@ -452,7 +452,6 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         String valueToEncode = username + ":" + password;
         return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
     }
-
     private String postRequest(String baseURL, String body) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;

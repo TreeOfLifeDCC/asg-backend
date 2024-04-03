@@ -88,7 +88,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         JSONArray childDataArray = new JSONArray();
         StringBuilder hasChildQuery = new StringBuilder();
         StringBuilder hasChildFilterQuery = new StringBuilder();
-        String esURL = "https://" + esConnectionURL;
+        String esURL = esConnectionURL;
 
         StringBuilder searchQuery = new StringBuilder();
 
