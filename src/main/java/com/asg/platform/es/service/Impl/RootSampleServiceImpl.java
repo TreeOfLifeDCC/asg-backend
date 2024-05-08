@@ -41,6 +41,12 @@ public class RootSampleServiceImpl implements RootSampleService {
     RootOrganismRepository rootOrganismRepository;
     @Value("${ES_CONNECTION_URL}")
     String esConnectionURL;
+
+    @Value("${ES_USERNAME}")
+    String esUsername;
+
+    @Value("${ES_PASSWORD}")
+    String esPassword;
     static final String [] taxaRankArray = {"superkingdom", "kingdom","subkingdom","superphylum","phylum","subphylum","superclass","class","subclass","infraclass","cohort","subcohort","superorder","order","suborder","infraorder","parvorder","section","subsection","superfamily","family","subfamily","tribe","subtribe","genus","series","subgenus","species_group","species_subgroup","species","subspecies","varietas","forma"};
 
     @Override
@@ -56,9 +62,11 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search",  getOrganismFilterQuery(search, filter, String.valueOf(page),String.valueOf(size), sortColumn, sortOrder,  taxonomyFilter));
+
+        String respString = this.postRequest( esConnectionURL + "/data_portal/_search",  getOrganismFilterQuery(search, filter, String.valueOf(page),String.valueOf(size), sortColumn, sortOrder,  taxonomyFilter));
 //        JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
         return respString;
+
     }
 
     @Override
@@ -73,7 +81,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'aggregations':{ 'status': {'terms':{'field':'trackingSystem.status'}");
         sb.append("}}}}}}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("rank");
         JSONArray trackFilterArray = (JSONArray) (aggregations.get("buckets"));
         for(int i=0; i<trackFilterArray.size();i++) {
@@ -128,7 +136,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("'organism_part_filter':{'terms':{'field':'records.organismPart', 'size': 2000}}");
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
         JSONArray sexFilter = (JSONArray) ((JSONObject) aggregations.get("sex_filter")).get("buckets");
         JSONArray trackFilter = (JSONArray) ((JSONObject) aggregations.get("tracking_status_filter")).get("buckets");
@@ -148,7 +156,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getSecondaryOrganismFilterResultQuery(organism, filter, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
         return respString;
     }
 
@@ -158,8 +166,12 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
 
+
+
         String query = this.getOrganismFilterQuery(search, filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
+
+
         return respString;
     }
 
@@ -170,7 +182,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getRootOrganismSearchQuery(search, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
 
         return respString;
     }
@@ -195,7 +207,7 @@ public class RootSampleServiceImpl implements RootSampleService {
             }
         }
         else {
-            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem', 'nested_filter':{'term':{'trackingSystem.status':'Done'}}}}");
+            sort.append("{'trackingSystem.rank':{'order':'desc','nested':{'path': 'trackingSystem', 'filter': {'term': {'trackingSystem.status': 'Done'}}}}}");
         }
         sort.append("],");
 
@@ -522,6 +534,11 @@ public class RootSampleServiceImpl implements RootSampleService {
         return query;
     }
 
+    private static final String getBasicAuthenticationHeader(String username, String password) {
+        String valueToEncode = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
+    }
+
     private String postRequest(String baseURL, String body) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -532,6 +549,8 @@ public class RootSampleServiceImpl implements RootSampleService {
             httpPost.setEntity(entity);
             httpPost.setHeader("Accept", "application/json");
             httpPost.setHeader("Content-type", "application/json");
+            httpPost.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
+
             CloseableHttpResponse rs = client.execute(httpPost);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
@@ -548,7 +567,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRootOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
+        String respString = this.getRequest(esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -556,7 +575,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
     @Override
     public long getRelatedOrganismCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/data_portal/_count");
+        String respString = this.getRequest( esConnectionURL + "/data_portal/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -608,7 +627,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getDistinctRootSamplesByOrganismQuery(size, sortColumn, sortOrder, afterKey);
-        respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        respString = this.postRequest( esConnectionURL + "/root_samples/_search", query);
         JSONObject res = (JSONObject) new JSONParser().parse(respString);
         return res;
     }
@@ -619,7 +638,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getDistinctRootSamplesCountByOrganismQuery();
-        respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        respString = this.postRequest( esConnectionURL + "/root_samples/_search", query);
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         String count = ((JSONObject) ((JSONObject) resp.get("aggregations")).get("type_count")).get("value").toString();
         return count;
@@ -646,7 +665,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("}}");
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/root_samples/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/root_samples/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations"));
         JSONArray accession = (JSONArray) ((JSONObject) aggregations.get("accession")).get("buckets");
 
@@ -663,7 +682,7 @@ public class RootSampleServiceImpl implements RootSampleService {
         sb.append("']}}]}}}");
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
         JSONObject resp = (JSONObject) ((JSONArray)((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits"))).get("hits")).get(0);
         JSONObject source = (JSONObject) resp.get("_source");
         JSONArray experiment = (JSONArray) source.get("experiment");
@@ -699,6 +718,8 @@ public class RootSampleServiceImpl implements RootSampleService {
             HttpGet httpGET = new HttpGet(baseURL);
             httpGET.setHeader("Accept", "application/json");
             httpGET.setHeader("Content-type", "application/json");
+            httpGET.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
+
             CloseableHttpResponse rs = client.execute(httpGET);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
@@ -726,7 +747,7 @@ public class RootSampleServiceImpl implements RootSampleService {
 
         String query = sb.toString().replaceAll("'", "\"");
 
-        String respString = this.postRequest("http://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("experiment")).get("library_construction_protocol");
         JSONArray libraryConstructionProtocol = (JSONArray) (aggregations.get("buckets"));
 
@@ -747,7 +768,7 @@ public class RootSampleServiceImpl implements RootSampleService {
     public String getGisData(String search, Optional<String> filter) throws ParseException {
         StringBuilder sb = new StringBuilder();
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/gis_filter_data/_search", getGisFilterQuery(filter,search));
+        String respString = this.postRequest( esConnectionURL + "/gis_filter_data/_search", getGisFilterQuery(filter,search));
 
         return respString;
     }

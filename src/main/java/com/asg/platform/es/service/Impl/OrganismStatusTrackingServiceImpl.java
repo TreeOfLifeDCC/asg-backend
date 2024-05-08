@@ -37,6 +37,12 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
     OrganismStatusTrackingRepository organismStatusTrackingRepository;
     @Value("${ES_CONNECTION_URL}")
     String esConnectionURL;
+
+    @Value("${ES_USERNAME}")
+    String esUsername;
+
+    @Value("${ES_PASSWORD}")
+    String esPassword;
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
@@ -53,14 +59,14 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/tracking_status_index/_search", query);
         JSONArray respArray = (JSONArray) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("hits")).get("hits");
         return respArray;
     }
 
     @Override
     public long getBiosampleStatusTrackingCount() throws ParseException {
-        String respString = this.getRequest("http://" + esConnectionURL + "/tracking_status_index/_count");
+        String respString = this.getRequest( esConnectionURL + "/tracking_status_index/_count");
         JSONObject resp = (JSONObject) new JSONParser().parse(respString);
         long count = Long.valueOf(resp.get("count").toString());
         return count;
@@ -86,7 +92,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         sb.append("}}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/tracking_status_index/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("trackingSystem")).get("rank");
         JSONArray trackFilterArray = (JSONArray) (aggregations.get("buckets"));
         for(int i=0; i<trackFilterArray.size();i++) {
@@ -176,7 +182,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.filterQueryGenerator(filter, from.get(), size.get(), sortColumn, sortOrder, taxonomyFilter);
-        respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        respString = this.postRequest( esConnectionURL + "/tracking_status_index/_search", query);
 
         return respString;
     }
@@ -188,7 +194,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.searchQueryGenerator(search, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/tracking_status_index/_search", query);
+        respString = this.postRequest( esConnectionURL + "/tracking_status_index/_search", query);
 
         return respString;
     }
@@ -200,7 +206,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         JSONObject jsonResponse = new JSONObject();
         HashMap<String, Object> response = new HashMap<>();
         String query = this.getOrganismByText(search, from.get(), size.get(), sortColumn, sortOrder);
-        respString = this.postRequest("http://" + esConnectionURL + "/organisms/_search", query);
+        respString = this.postRequest( esConnectionURL + "/organisms/_search", query);
 
         return respString;
     }
@@ -234,7 +240,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             }
         }
         else {
-            sort.append("{'trackingSystem.rank':{'order':'desc','nested_path':'trackingSystem', 'nested_filter':{'term':{'trackingSystem.status':'Done'}}}}");
+            sort.append("{'trackingSystem.rank':{'order':'desc','nested':{'path': 'trackingSystem', 'filter': {'term': {'trackingSystem.status': 'Done'}}}}}");
         }
 
         sort.append("],");
@@ -442,6 +448,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         return query;
     }
 
+
     private String postRequest(String baseURL, String body) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -452,6 +459,8 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             httpPost.setEntity(entity);
             httpPost.setHeader("Accept", "application/json");
             httpPost.setHeader("Content-type", "application/json");
+            httpPost.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
+
             CloseableHttpResponse rs = client.execute(httpPost);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
@@ -486,6 +495,10 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         return query;
     }
 
+    private static final String getBasicAuthenticationHeader(String username, String password) {
+        String valueToEncode = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
+    }
     private String getRequest(String baseURL) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -494,6 +507,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             HttpGet httpGET = new HttpGet(baseURL);
             httpGET.setHeader("Accept", "application/json");
             httpGET.setHeader("Content-type", "application/json");
+            httpGET.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
             CloseableHttpResponse rs = client.execute(httpGET);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
