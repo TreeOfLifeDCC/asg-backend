@@ -448,10 +448,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         return query;
     }
 
-    private static final String getBasicAuthenticationHeader(String username, String password) {
-        String valueToEncode = username + ":" + password;
-        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
-    }
+
     private String postRequest(String baseURL, String body) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -498,6 +495,10 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
         return query;
     }
 
+    private static final String getBasicAuthenticationHeader(String username, String password) {
+        String valueToEncode = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
+    }
     private String getRequest(String baseURL) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -506,6 +507,7 @@ public class OrganismStatusTrackingServiceImpl implements OrganismStatusTracking
             HttpGet httpGET = new HttpGet(baseURL);
             httpGET.setHeader("Accept", "application/json");
             httpGET.setHeader("Content-type", "application/json");
+            httpGET.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
             CloseableHttpResponse rs = client.execute(httpGET);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {

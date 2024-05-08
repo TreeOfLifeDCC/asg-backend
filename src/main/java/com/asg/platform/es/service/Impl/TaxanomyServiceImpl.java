@@ -32,6 +32,12 @@ public class TaxanomyServiceImpl implements TaxanomyService {
     @Value("${ES_CONNECTION_URL}")
     String esConnectionURL;
 
+    @Value("${ES_USERNAME}")
+    String esUsername;
+
+    @Value("${ES_PASSWORD}")
+    String esPassword;
+
     @Autowired
     Driver driver;
 
@@ -45,7 +51,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         sb.append("}}}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/ontology/_search", query);
+        String respString = this.postRequest( esConnectionURL + "/ontology/_search", query);
 
         return respString;
     } static final String [] taxaRankArray = {"superkingdom", "kingdom","subkingdom","superphylum","phylum","subphylum","superclass","class","subclass","infraclass","cohort","subcohort","superorder","order","suborder","infraorder","parvorder","section","subsection","superfamily","family","subfamily","tribe","subtribe","genus","series","subgenus","species_group","species_subgroup","species","subspecies","varietas","forma"};
@@ -72,7 +78,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
 
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest("https://" + esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest(esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
 
         return aggregations.toJSONString();
@@ -443,6 +449,12 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         sb.append("'varietas':{'terms':{'field':'taxonomies.varietas', 'size': 20000}}");
     }
 
+    private static final String getBasicAuthenticationHeader(String username, String password) {
+        String valueToEncode = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
+    }
+
+
     private String postRequest(String baseURL, String body) {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = null;
@@ -453,6 +465,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
             httpPost.setEntity(entity);
             httpPost.setHeader("Accept", "application/json");
             httpPost.setHeader("Content-type", "application/json");
+            httpPost.setHeader("Authorization", getBasicAuthenticationHeader(esUsername, esPassword));
             CloseableHttpResponse rs = client.execute(httpPost);
             resp = IOUtils.toString(rs.getEntity().getContent(), StandardCharsets.UTF_8.name());
         } catch (IOException e) {
