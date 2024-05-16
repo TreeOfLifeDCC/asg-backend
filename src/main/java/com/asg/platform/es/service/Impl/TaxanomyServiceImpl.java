@@ -430,7 +430,6 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         sb.append("'taxId':{'terms':{'field':'taxonomies." + childRank + ".tax_id.keyword', 'size': 20000}}}}}}");
         sb.append("}}");
         String query = sb.toString().replaceAll("'", "\"");
-        System.out.println(query);
         String respString = this.postRequest(esURL, query);
         JSONArray aggregations = null;
         JSONArray rootAggregations = null;
