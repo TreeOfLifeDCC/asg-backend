@@ -51,7 +51,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         sb.append("}}}");
 
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest( esConnectionURL + "/ontology/_search", query);
+        String respString = this.postRequest( "https://"+esConnectionURL + "/ontology/_search", query);
 
         return respString;
     } static final String [] taxaRankArray = {"superkingdom", "kingdom","subkingdom","superphylum","phylum","subphylum","superclass","class","subclass","infraclass","cohort","subcohort","superorder","order","suborder","infraorder","parvorder","section","subsection","superfamily","family","subfamily","tribe","subtribe","genus","series","subgenus","species_group","species_subgroup","species","subspecies","varietas","forma"};
@@ -78,7 +78,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
 
         sb.append("}}}}");
         String query = sb.toString().replaceAll("'", "\"");
-        String respString = this.postRequest(esConnectionURL + "/data_portal/_search", query);
+        String respString = this.postRequest("https://"+esConnectionURL + "/data_portal/_search", query);
         JSONObject aggregations = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(respString)).get("aggregations")).get("filters");
 
         return aggregations.toJSONString();
@@ -94,7 +94,7 @@ public class TaxanomyServiceImpl implements TaxanomyService {
         JSONArray childDataArray = new JSONArray();
         StringBuilder hasChildQuery = new StringBuilder();
         StringBuilder hasChildFilterQuery = new StringBuilder();
-        String esURL = esConnectionURL;
+        String esURL = "https://"+esConnectionURL;
 
         StringBuilder searchQuery = new StringBuilder();
 
