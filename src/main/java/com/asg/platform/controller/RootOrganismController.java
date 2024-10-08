@@ -24,7 +24,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/root_organisms")
-@CrossOrigin("*")
 @Api(tags = "Root Organisms", description = "Controller for Root Organisms")
 public class RootOrganismController {
 
